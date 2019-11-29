@@ -233,3 +233,27 @@ void MainWindow:: ui_rearangement(void){
     this->songs->move(p);
 
 }
+
+
+QString convert(uint input){
+
+    uint hours, minutes, seconds;
+    hours = input/3600;
+    input -= 3600*hours;
+    minutes = input/60;
+    input -= 60*minutes;
+    seconds = input;
+
+    QString res;
+    if(hours>0){
+        res += QString::number(hours);
+        res += ':';
+    }
+    if(minutes<10) res += '0';
+    res += QString::number(minutes);
+    res += ':';
+    if(seconds<10) res += '0';
+    res += QString::number(seconds);
+
+    return res;
+}
