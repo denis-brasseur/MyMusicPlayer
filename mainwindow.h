@@ -14,8 +14,11 @@
 #include <QListIterator>
 #include <QFileDialog>
 #include <QtMultimedia/QMediaPlayer>
+#include <QtMultimedia/QMediaObject>
 #include <QDebug>
 #include <QListWidget>
+#include <QMediaMetaData>
+#include <QVideoWidget>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -70,6 +73,8 @@ private slots:
 public slots:
     void end_of_music_file(QMediaPlayer::MediaStatus status);
     void mediaChanged(const QMediaContent& media);
+    void metaDataChanged(const QString& key, const QVariant& var);
+
 
 signals:
     void new_file_add(QString filename);
@@ -86,6 +91,8 @@ private:
     int current;
     enum loopflag loop;
     SongList *songs;
+    DurationDisplay2 *durationDisplay;
+    QPixmap default_image;
 
     void shuffle(void);
     void ui_rearangement(void);

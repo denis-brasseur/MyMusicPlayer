@@ -6,9 +6,14 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    this->default_image = *this->ui->coverArt->pixmap();
     this->player = new QMediaPlayer();
+//    QVideoWidget *vid = new QVideoWidget();
+//    this->player->setVideoOutput(vid);
     this->loop = noLoop;
     this->songs = this->ui->songs_list;
+
+    this->durationDisplay = new DurationDisplay2(this->ui->elapsedTime,this->ui->remainingTime,this->ui->horizontalSlider);
 
 //    this->ui->verticalSlider->resize(this->ui->verticalSlider->width(),this->songs->height());
     this->ui->verticalSlider->setValue(50);
@@ -18,13 +23,16 @@ MainWindow::MainWindow(QWidget *parent)
     connect(this,&MainWindow::pause,this->player,&QMediaPlayer::pause);
     connect(this,&MainWindow::stop,this->player,&QMediaPlayer::stop);
     connect(this->player,&QMediaPlayer::mediaStatusChanged,this,&MainWindow::end_of_music_file);
-    connect(this->player,&QMediaPlayer::mediaChanged,this->ui->label,&DurationDisplay::mediaChanged);
-    connect(this->player,&QMediaPlayer::durationChanged,this->ui->label,&DurationDisplay::durationChanged);
+    connect(this->player,&QMediaPlayer::mediaChanged,this->durationDisplay,&DurationDisplay2::mediaChanged);
+    connect(this->player,&QMediaPlayer::mediaChanged,this,&MainWindow::mediaChanged);
+    connect(this->player,&QMediaPlayer::durationChanged,this->durationDisplay,&DurationDisplay2::durationChanged);
     //connect(this,&MainWindow::sendPlayer,this->ui->label,&DurationDisplay::durationChanged);
-    connect(this,&MainWindow::pause,this->ui->label,&DurationDisplay::pause);
-    connect(this,&MainWindow::stop,this->ui->label,&DurationDisplay::reset);
-    connect(this,&MainWindow::play,this->ui->label,&DurationDisplay::start);
+    connect(this,&MainWindow::pause,this->durationDisplay,&DurationDisplay2::pause);
+    connect(this,&MainWindow::stop,this->durationDisplay,&DurationDisplay2::reset);
+    connect(this,&MainWindow::play,this->durationDisplay,&DurationDisplay2::start);
     connect(this->ui->verticalSlider,&QSlider::valueChanged,this->player,&QMediaPlayer::setVolume);
+    connect(this->durationDisplay,&DurationDisplay2::setPosition,this->player,&QMediaPlayer::setPosition);
+    connect(this->player,SIGNAL(metaDataChanged(const QString&, const QVariant&)),this,SLOT(metaDataChanged(const QString&, const QVariant&)));
 
 
 //    this->ui_rearangement();
@@ -47,8 +55,15 @@ void MainWindow::on_playButton_clicked()
 {
     if(this->songs->currentItem()!=nullptr){
         this->player->setMedia(QUrl::fromLocalFile(this->songs->currentItem()->filePath()));
+//        QImage cover = this->player->metaData(QMediaMetaData::CoverArtImage).value<QImage>();
+//        qDebug() << cover.isNull();
+//        qDebug() << this->player->availableMetaData();
+//        qDebug() << this->player->metaData(QMediaMetaData::Title).toString();
+//        qDebug() << this->player->metaData(QMediaMetaData::CoverArtImage);
+//       this->ui->label->setPixmap(QPixmap::fromImage(cover));
+        emit play();
     }
-    emit play();
+
 }
 
 void MainWindow::on_pauseButton_clicked()
@@ -62,7 +77,8 @@ void MainWindow::on_stopButton_clicked()
 }
 
 void MainWindow::mediaChanged(const QMediaContent& media){
-    emit sendPlayer(this->player);
+    this->ui->coverArt->setPixmap(this->default_image);
+//    emit sendPlayer(this->player);
 }
 
 void MainWindow::on_previousButton_clicked()
@@ -145,7 +161,7 @@ void MainWindow::on_loopAllButton_clicked()
 {
     if(this->ui->loopAllButton->isChecked()){
         this->loop = loopAll;
-        qDebug() << "loopAll";
+//        qDebug() << "loopAll";
         if(this->ui->loopOneButton->isChecked()) this->ui->loopOneButton->setChecked(false);
         this->ui->loopAllButton->setChecked(true);
     }
@@ -154,7 +170,7 @@ void MainWindow::on_loopAllButton_clicked()
 void MainWindow::on_noLoopButton_clicked()
 {
     this->loop = noLoop;
-    qDebug() << "noLoop";
+//    qDebug() << "noLoop";
     if(this->ui->loopOneButton->isChecked()) this->ui->loopOneButton->setChecked(false);
     if(this->ui->loopAllButton->isChecked()) this->ui->loopAllButton->setChecked(false);
 }
@@ -218,7 +234,7 @@ void MainWindow::duration(qint64 duration){
     std::stringstream buf;
     buf << minutes << ":" << seconds;
     QString readableDuration = QString (buf.str().data());
-    this->ui->label->setText(readableDuration);
+//    this->ui->label->setText(readableDuration);
 }
 
 
@@ -256,4 +272,11 @@ QString convert(uint input){
     res += QString::number(seconds);
 
     return res;
+}
+
+void MainWindow::metaDataChanged(const QString& key, const QVariant& var){
+    if(key == QMediaMetaData::CoverArtImage){
+//        qDebug() << this->player->availableMetaData();
+        this->ui->coverArt->setPixmap(QPixmap::fromImage(var.value<QImage>().scaled(375,250,Qt::KeepAspectRatio)));
+    }
 }

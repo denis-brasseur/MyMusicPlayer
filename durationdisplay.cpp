@@ -106,3 +106,124 @@ void DurationDisplay::reset(void) {
 //    qDebug() << buf.str().data();
     this->setText(QString(buf.str().data()));
 }
+
+
+/*** DurationDisplay2 ***/
+
+DurationDisplay2::DurationDisplay2(QLabel *l1,QLabel *l2,ControlBar *s){
+    this->elapsedTimeDisplay=l1;
+    if(this->elapsedTimeDisplay != nullptr) this->elapsedTimeDisplay->setText(DurationDisplay2::conversion(0));
+    this->remainingTimeDisplay=l2;
+    if(this->remainingTimeDisplay != nullptr) this->remainingTimeDisplay->setText(DurationDisplay2::conversion(0));
+    this->controlBar=s;
+    if(this->controlBar!= nullptr) connect(this->controlBar,&QSlider::sliderReleased,this,&DurationDisplay2::valueChanged);
+    if(this->controlBar!= nullptr) connect(this->controlBar,&ControlBar::Clicked,this,&DurationDisplay2::valueChanged);
+    this->timer = new QTimer();
+    this->timer->setInterval(1000); //Timer will buzz every second
+    connect(this->timer,&QTimer::timeout,this,&DurationDisplay2::elapsedSecond);
+    this->remainingTime = this->elapsedTime = this->duration = 0;
+    this->isMediaChanged = this->isStopButtonPushed =  false;
+}
+
+QString DurationDisplay2::conversion(uint time){
+
+    uint hours, minutes, seconds;
+    hours = time/3600;
+    time -= hours*3600;
+    minutes = time/60;
+    time -= minutes*60;
+    seconds = time;
+
+    QString ret;
+    if(hours>0) ret += QString::number(hours) + ":";
+    if(minutes<10) ret += "0";
+    ret += QString::number(minutes) + ":";
+    if(seconds<10) ret += "0";
+    ret += QString::number(seconds);
+
+    return ret;
+}
+
+void DurationDisplay2::mediaChanged(const QMediaContent &media){
+    this->isMediaChanged=true;
+}
+
+void DurationDisplay2::durationChanged(qint64 duration){
+    if(this->isMediaChanged==false || duration==0){
+        return;
+    }
+    else this->isMediaChanged=false;
+
+    this->remainingTime = this->duration = duration/1000;
+    this->elapsedTime = 0;
+
+    this->elapsedTimeDisplay->setText(DurationDisplay2::conversion(this->elapsedTime));
+    this->remainingTimeDisplay->setText(DurationDisplay2::conversion(this->remainingTime));
+
+    this->controlBar->setValue(0);
+}
+
+void DurationDisplay2::start(){ this->timer->start();}
+
+void DurationDisplay2::pause(){ this->timer->stop();}
+
+void DurationDisplay2::reset(){
+    this->isStopButtonPushed = true;
+//    qDebug() << "reset";
+    this->timer->stop();
+
+    this->elapsedTime = 0;
+    this->remainingTime = this->duration;
+
+    this->elapsedTimeDisplay->setText(DurationDisplay2::conversion(this->elapsedTime));
+    this->remainingTimeDisplay->setText(DurationDisplay2::conversion(this->remainingTime));
+
+    this->controlBar->setValue(0);
+}
+
+void DurationDisplay2::elapsedSecond(){
+    this->remainingTime--;
+    this->elapsedTime++;
+
+    this->elapsedTimeDisplay->setText(DurationDisplay2::conversion(this->elapsedTime));
+    this->remainingTimeDisplay->setText(DurationDisplay2::conversion(this->remainingTime));
+
+
+    int percent;
+    percent = (100*this->elapsedTime)/this->duration;
+    this->controlBar->setValue(percent);
+}
+
+void DurationDisplay2::valueChanged(){
+//    if(this->isStopButtonPushed==true){
+//        qDebug() << "ici";
+//        this->isStopButtonPushed=false;
+//        return;
+//    }
+    int value = this->controlBar->value();
+    this->timer->stop();
+    this->elapsedTime = (value*this->duration)/100;
+    this->remainingTime = this->duration - this->elapsedTime;
+
+    this->elapsedTimeDisplay->setText(DurationDisplay2::conversion(this->elapsedTime));
+    this->remainingTimeDisplay->setText(DurationDisplay2::conversion(this->remainingTime));
+
+    qint64 position = this->elapsedTime*1000;
+    emit setPosition(position);
+
+    this->timer->start();
+}
+
+
+/*** Control Bar ***/
+ControlBar::ControlBar(QWidget* parent) : QSlider(parent){
+}
+
+void ControlBar::mousePressEvent(QMouseEvent *event){
+    if(event->button() == Qt::LeftButton){
+        this->setValue(this->minimum() + (event->x()*(this->maximum() - this->minimum())/this->width()));
+        event->accept();
+    }
+    emit Clicked();
+    QSlider::mousePressEvent(event);
+}
