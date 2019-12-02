@@ -7,6 +7,7 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
     this->default_image = *this->ui->coverArt->pixmap();
+    this->ui->coverArt->setVisible(false);
     this->player = new QMediaPlayer();
 //    QVideoWidget *vid = new QVideoWidget();
 //    this->player->setVideoOutput(vid);
@@ -78,6 +79,7 @@ void MainWindow::on_stopButton_clicked()
 
 void MainWindow::mediaChanged(const QMediaContent& media){
     this->ui->coverArt->setPixmap(this->default_image);
+    this->ui->coverArt->setVisible(false);
 //    emit sendPlayer(this->player);
 }
 
@@ -134,7 +136,7 @@ void MainWindow::on_loopOneButton_clicked()
 {
     if(this->ui->loopOneButton->isChecked()){
         this->loop = loopOne;
-        qDebug() << "loopOne";
+//        qDebug() << "loopOne";
         if(this->ui->loopAllButton->isChecked()) this->ui->loopAllButton->setChecked(false);
         this->ui->loopOneButton->setChecked(true);
     }
@@ -277,6 +279,7 @@ QString convert(uint input){
 void MainWindow::metaDataChanged(const QString& key, const QVariant& var){
     if(key == QMediaMetaData::CoverArtImage){
 //        qDebug() << this->player->availableMetaData();
+        this->ui->coverArt->setVisible(true);
         this->ui->coverArt->setPixmap(QPixmap::fromImage(var.value<QImage>().scaled(375,250,Qt::KeepAspectRatio)));
     }
 }
